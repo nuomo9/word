@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>添加单词</title>
+    <script type="application/javascript" src="js/ajax.js"></script>
+    <script type="application/javascript" src="js/sweetalert.min.js"></script>
+    <style type="text/css">
+        td {
+            height: 40px;
+            border-width: 1px;
+            border-style: groove;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body style="background-color: #f5f5d5">
+<a href="index.html" style="text-decoration: none; position: absolute; left: 100px; top: 20px">
+    <span style="font-family: 楷体; font-weight: bold; font-size: 150%; color: blue">背诵单词</span>
+</a>
+<a href="wordList.html" style="text-decoration: none; position: absolute; left: 220px; top: 20px">
+    <span style="font-family: 楷体; font-weight: bold; font-size: 150%; color: blue">单词列表</span>
+</a>
+<a href="addWord.html" style="text-decoration: none; position: absolute; left: 340px; top: 20px">
+    <span style="font-family: 楷体; font-weight: bold; font-size: 150%; color: red">添加单词</span>
+</a>
+
+<table style="border-collapse: collapse; table-layout: fixed; position: absolute; left: 100px; top: 100px">
+    <tr>
+        <td style="width: 100px"><span
+                style="font-family: 楷体; font-weight: bold; font-size: 140%">编号</span></td>
+        <td style="width: 100px"><span
+                style="font-family: 楷体; font-weight: bold; font-size: 140%">收藏</span></td>
+        <td style="width: 300px"><span
+                style="font-family: 楷体; font-weight: bold; font-size: 140%">英文</span></td>
+        <td style="width: 400px"><span
+                style="font-family: 楷体; font-weight: bold; font-size: 140%">中文</span></td>
+        <td style="width: 100px"><span
+                style="font-family: 楷体; font-weight: bold; font-size: 140%">操作</span></td>
+    </tr>
+    <tbody id="items"></tbody>
+    <tr>
+        <td colspan="5" style="height: 60px; text-align: center;">
+            <span style="display: block; font-family: Arial; font-weight: bold; font-size: 140%; position: relative; margin-left: -65px; top: 15px">+<input
+                    id="rows" type="text" value="1" maxlength="2"
+                    style="width: 30px; height: 24px; font-family: Arial; font-size: 80%"/></span>
+            <button id="addRows" style="width: 60px; height: 30px; position: relative; margin-left: 60px; top: -15px">
+                <span style="font-family: 楷体; font-weight: bold; font-size: 140%">确定</span>
+            </button>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="8" style="height: 60px; text-align: center; border: none">
+            <button id="submit" style="width: 120px; height: 50px">
+                <span style="font-family: 楷体; font-weight: bold; font-size: 160%">立即添加</span>
+            </button>
+        </td>
+    </tr>
+</table>
+
+
+<script type="application/javascript">
+    let items = document.getElementById("items");
+    let rows = document.getElementById("rows");
+    let addRows = document.getElementById("addRows");
+    let submit = document.getElementById("submit");
+    // 重新设置编号
+    let resetItemsId = function () {
+        let i = 1;
+        for (let tr of items.children) {
+            tr.children[0].innerHTML = '<span style="font-family: Arial; font-size: 120%">' + i.toString() + '</span>';
+            i++;
+        }
+    };
+    // 新增tr
+    let createTr = function () {
+        let tr = document.createElement("tr");
+        // 编号
+        let idTd = document.createElement("td");
+        tr.appendChild(idTd);
+        // 收藏
+        let storeTd = document.createElement("td");
+        storeTd.innerHTML = '<input type="checkbox" style="width: 25px; height: 25px; position: relative; top: 1px"/>';
+        tr.appendChild(storeTd);
+        // 英文
+        let enTd = document.createElement("td");
+        enTd.innerHTML = '<input type="text" maxlength="100" style="width: 292px; height: 36px; font-family: Arial; font-size: 100%"/>';
+        tr.appendChild(enTd);
+        // 中文
+        let cnTd = document.createElement("td");
+        cnTd.innerHTML = '<input type="text" maxlength="100" style="width: 392px; height: 36px; font-family: 楷体; font-size: 120%"/>';
+        tr.appendChild(cnTd);
+        // 操作
+        let actionTd = document.createElement("td");
+        let deleteTrButton = document.createElement("button");
+        deleteTrButton.style.width = "60px";
+        deleteTrButton.style.height = "30px";
+        deleteTrButton.innerHTML = '<span style="font-family: 楷体; font-weight: bold; font-size: 140%">删除</span>';
+        deleteTrButton.onclick = function () {
+            items.removeChild(this.parentNode.parentNode);
+            resetItemsId();
+        };
+        actionTd.appendChild(deleteTrButton);
+        tr.appendChild(actionTd);
+        return tr;
+    };
+    // 新增一行
+    let addRow = function () {
+        let reg = /^\d+$/;
+        if (reg.test(rows.value)) {
+            let num = parseInt(rows.value);
+            if (num > 0 && num < 100) {
+                for (let i = 0; i < num; i++) {
+                    let tr = createTr();
+                    if (tr) {
+                        items.appendChild(tr);
+                        resetItemsId();
+                    }
+                }
+            }
+        }
+    };
+    addRows.onclick = addRow;
+    // 校验并提交数据
+    submit.onclick = function () {
+        let dataList = [];
+        let vaild = true;
+        for (let tr of items.children) {
+            let store = tr.children[1].firstElementChild.checked;
+            let en = tr.children[2].firstElementChild.value;
+            let cn = tr.children[3].firstElementChild.value;
+            // 校验必填项
+            if (en) {
+                let data = {};
+                data.store = store;
+                data.en = en;
+                data.cn = cn;
+                dataList.push(data);
+            } else {
+                vaild = false;
+                swal({
+                    text: "请先完成表单",
+                    icon: "error"
+                });
+            }
+        }
+        if (vaild) {
+            ajax.post("/word/batchAdd?" + new Date().getTime().toString(), function (response) {
+                if (response.status === "success") {
+                    swal({
+                        text: response.data,
+                        icon: "success"
+                    });
+                    items.innerHTML = "";
+                    let temp = rows.value;
+                    rows.value = "1";
+                    addRow();
+                    rows.value = temp;
+                } else {
+                    swal({
+                        text: response.data,
+                        icon: "error"
+                    });
+                }
+            }, JSON.stringify(dataList));
+        }
+    };
+    document.body.onload = function () {
+        addRow();
+    };
+</script>
+</body>
+</html>

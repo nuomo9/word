@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>背诵单词</title>
+    <script src="js/ajax.js"></script>
+    <script type="application/javascript" src="js/PageTool.js"></script>
+</head>
+<body style="background-color: #f5f5d5">
+<a href="index.html" style="text-decoration: none; position: absolute; left: 100px; top: 20px">
+    <span style="font-family: 楷体; font-weight: bold; font-size: 150%; color: red">背诵单词</span>
+</a>
+<a href="wordList.html" style="text-decoration: none; position: absolute; left: 220px; top: 20px">
+    <span style="font-family: 楷体; font-weight: bold; font-size: 150%; color: blue">单词列表</span>
+</a>
+<a href="addWord.html" style="text-decoration: none; position: absolute; left: 340px; top: 20px">
+    <span style="font-family: 楷体; font-weight: bold; font-size: 150%; color: blue">添加单词</span>
+</a>
+<!--   -->
+<div style="border-weight: 1px; border-style: none; width: 280px; height: 300px; position: absolute; left: 102px; top: 400px">
+    <div style="width: 60px; height: 25px; font-family: 楷体; font-size: 160%; font-weight: bold; text-align: center; line-height: 25px; position: relative; left: 50px; top: 18px">
+        收藏
+    </div>
+    <div id="storeDiv"
+         style="width: 60px; height: 40px; font-family: 楷体; font-size: 150%; font-weight: bold; color: blue; text-align: center; line-height: 40px; position: relative; left: 120px; top: -15px; background-color: white">
+    </div>
+    <button id="setStore" style="width: 70px; height: 40px; position: relative; left: 200px; top: -55px"></button>
+
+    <span style="font-family: 楷体; font-size: 160%; display: block; position: relative; left: 80px; top: -35px">显示收藏</span>
+    <input id="displayStore" type="checkbox"
+           style="width: 40px; height: 40px; position: relative; left: 195px; top: -73px"/>
+    <span style="font-family: 楷体; font-size: 160%; display: block; position: relative; left: 80px; top: -60px">显示英文</span>
+    <input id="displayEn" type="checkbox"
+           style="width: 40px; height: 40px; position: relative; left: 195px; top: -98px"/>
+    <span style="font-family: 楷体; font-size: 160%; display: block; position: relative; left: 80px; top: -85px">显示中文</span>
+    <input id="displayCn" type="checkbox"
+           style="width: 40px; height: 40px; position: relative; left: 195px; top: -123px"/>
+
+    <div id="currentDiv"
+         style="width: 70px; height: 40px; font-family: Arial; font-size: 120%; font-weight: normal; text-align: center; line-height: 40px; position: relative; left: 80px; top: -90px; background-color: white">
+
+    </div>
+    <div style="width: 10px; height: 40px; font-family: Arial; font-size: 120%; font-weight: bold; text-align: center; line-height: 40px; position: relative; left: 155px; top: -130px; background-color: #f5f5d5">
+        /
+    </div>
+    <div id="lengthDiv"
+         style="width: 70px; height: 40px; font-family: Arial; font-size: 120%; font-weight: normal; text-align: center; line-height: 40px; position: relative; left: 170px; top: -170px; background-color: white">
+
+    </div>
+</div>
+
+<div id="content"
+     style="width: 1000px; height: 600px; position: absolute; left: 400px; top: 110px; border-width: 1px; border-style: groove">
+    <input id="enInput" type="text" readonly=true
+           style="width: 990px; height: 400px; text-align: center; user-select: none; font-family: Arial; font-size: 300%; font-weight: bold; position: relative; left: 2px; top: 2px; border-width: 1px; border-style: groove; background-color: white"/>
+    <input id="cnInput" type="text" readonly=true
+           style="width: 990px; height: 186px; text-align: center; user-select: none; font-family: 楷体; font-size: 180%; font-weight: bold; position: relative; left: 2px; top: 4px; border-width: 1px; border-style: groove; background-color: white"/>
+</div>
+<div id="tool"
+     style="width: 1000px; position: absolute; left: 400px; top: 725px; border-weight: 0px; border-style: none; text-align: center"></div>
+
+<script type="application/javascript">
+    let storeDiv = document.getElementById("storeDiv");
+    let setStore = document.getElementById("setStore");
+    let displayStore = document.getElementById("displayStore");
+    let displayEn = document.getElementById("displayEn");
+    let displayCn = document.getElementById("displayCn");
+    let currentDiv = document.getElementById("currentDiv");
+    let lengthDiv = document.getElementById("lengthDiv");
+    let content = document.getElementById("content");
+    let enInput = document.getElementById("enInput");
+    let cnInput = document.getElementById("cnInput");
+    // 默认只看英文
+    displayEn.checked = true;
+    displayCn.checked = false;
+    // 修改颜色
+    let setEnColor = function (bean) {
+        if (bean.store) {
+            enInput.style.color = "blue";
+        } else {
+            enInput.style.color = "black";
+        }
+    };
+    let setCnColor = function (bean) {
+        cnInput.style.color = "black";
+    };
+    // 展示单词
+    let wordList = null;
+    let cursor = 0;
+    let bean = null;
+    let showWord = function () {
+        storeDiv.innerText = null;
+        setStore.innerHTML = '<span style="font-family: 楷体; font-size: 100%; font-weight: bold">&nbsp;</span>';
+        setStore.onclick = null;
+        enInput.value = null;
+        cnInput.value = null;
+        currentDiv.innerText = null;
+        // 恢复背景色
+        enInput.style.color = "white";
+        cnInput.style.color = "white";
+        // 获取单词
+        bean = null;
+        if (wordList && cursor >= 0 && cursor < wordList.length) {
+            bean = wordList[cursor];
+            currentDiv.innerText = (cursor + 1).toString();
+        }
+        if (bean) {
+            if (displayEn.checked) {
+                setEnColor(bean);
+            }
+            if (displayCn.checked) {
+                setCnColor(bean);
+            }
+            // 根据
+            enInput.value = bean.en;
+            cnInput.value = bean.cn;
+            // 收藏
+            storeDiv.innerText = bean.store ? '是' : '否';
+            setStore.innerHTML = '<span style="font-family: 楷体; font-size: 150%; font-weight: bold">' + (bean.store ? '取消' : '收藏') + '</span>';
+            setStore.onclick = function () {
+                let data = {
+                    id: bean.idStr,
+                    store: !bean.store
+                };
+                ajax.put("/word/update", function (response) {
+                    if (response.status === "success") {
+                        ajax.get("/word/get/" + bean.idStr + "?" + new Date().getTime().toString(), function (response) {
+                            if (response.status === "success") {
+                                bean = response.data;
+                                wordList[cursor] = bean;
+                                storeDiv.innerText = bean.store ? '是' : '否';
+                                setStore.innerHTML = '<span style="font-family: 楷体; font-size: 150%; font-weight: bold">' + (bean.store ? '取消' : '收藏') + '</span>';
+                                setEnColor(bean);
+                            }
+                        });
+                    }
+                }, JSON.stringify(data));
+            };
+        } else {
+            complete();
+        }
+    };
+    let complete = function () {
+        enInput.value = "Congratulations !";
+        enInput.style.color = "blue";
+        cnInput.value = "所有单词都已背诵完成。";
+        cnInput.style.color = "black";
+    };
+    // 左键改变背景色显示文字
+    enInput.onclick = function () {
+        setEnColor(bean);
+    };
+    cnInput.onclick = function () {
+        setCnColor(bean);
+    };
+    // 右键展示下一个单词
+    content.oncontextmenu = function () {
+        window.event.returnValue = false;
+        if (cursor < wordList.length) {
+            cursor++;
+        }
+        showWord();
+    };
+    // 鼠标滚动展示下一个单词
+    content.onmousewheel = function (e) {
+        //当滑轮向上滚动时
+        if (e.wheelDelta > 0) {
+            if (cursor > 0) {
+                cursor--;
+            }
+            showWord();
+        }
+        //当滑轮向下滚动时
+        if (e.wheelDelta < 0) {
+            if (cursor < wordList.length) {
+                cursor++;
+            }
+            showWord();
+        }
+    };
+    // 监听上下左右按键
+    content.onkeydown = function (e) {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            if (cursor > 0) {
+                cursor--;
+            }
+            showWord();
+        } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            if (cursor < wordList.length) {
+                cursor++;
+            }
+            showWord();
+        } else if (e.key === 'Enter' || e.key === 'Control') {
+            setEnColor(bean);
+            setCnColor(bean);
+        } else {
+            console.log(e.key);
+        }
+    };
+    // 更新请求参数
+    let data = {};
+    displayStore.onclick = function () {
+        // 勾选时只查询收藏,不勾选则查询全部
+        data.store = displayStore.checked ? true : null;
+        // 重新查询结果
+        tool.reset();
+        tool.service();
+    };
+    let tool = new PageTool(function () {
+        let tool = this;
+        let url = "/word/listQuery";
+        data.page = {
+            current: tool.current,
+            size: tool.size
+        };
+        cursor = 0;
+        currentDiv.innerText = null;
+        lengthDiv.innerText = null;
+        ajax.post(url, function (response) {
+            // 更新菜单栏
+            tool.updateNodeStatus(response.data);
+            // 没有查询出数据
+            if (response.data.total === 0) {
+                complete();
+            } else {
+                wordList = response.data.records;
+                lengthDiv.innerText = response.data.records.length.toString();
+                showWord();
+            }
+        }, JSON.stringify(data));
+    });
+    document.getElementById("tool").append(tool.setSizeList(50, 100, 150, 500, 1000, 2000, 4000).generateToolbar());
+</script>
+</body>
+</html>

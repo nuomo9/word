@@ -1,0 +1,1 @@
+C:\Users\someone\Git\git-bash.exe C:\Users\someone\word\stop.sh

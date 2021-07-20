@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>单词列表</title>
+    <script type="application/javascript" src="js/ajax.js"></script>
+    <script type="application/javascript" src="js/PageTool.js"></script>
+    <script type="application/javascript" src="js/sweetalert.min.js"></script>
+    <style type="text/css">
+        td {
+            height: 40px;
+            border-width: 1px;
+            border-style: groove;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body style="background-color: #f5f5d5">
+<a href="index.html" style="text-decoration: none; position: absolute; left: 100px; top: 20px">
+    <span style="font-family: 楷体; font-weight: bold; font-size: 150%; color: blue">背诵单词</span>
+</a>
+<a href="wordList.html" style="text-decoration: none; position: absolute; left: 220px; top: 20px">
+    <span style="font-family: 楷体; font-weight: bold; font-size: 150%; color: red">单词列表</span>
+</a>
+<a href="addWord.html" style="text-decoration: none; position: absolute; left: 340px; top: 20px">
+    <span style="font-family: 楷体; font-weight: bold; font-size: 150%; color: blue">添加单词</span>
+</a>
+
+<div style="width: 340px; height: 230px; background-color: azure; position: absolute; left: 100px; top: 100px; border-width: 1px; border-style: solid">
+    <span style="font-family: 楷体; font-size: 130%; font-weight: bold; display: block; position: relative; left: 10px; top: 25px">收藏</span>
+    <select id="storeSelect"
+            style="width: 258px; height: 40px; font-family: 楷体; font-size: 130%; position: relative; left: 60px; top: -7px">
+        <option value=""></option>
+        <option value="1">是</option>
+        <option value="0">否</option>
+    </select>
+
+    <span style="font-family: 楷体; font-size: 130%; font-weight: bold; display: block; position: relative; left: 10px; top: 15px">英文</span>
+    <input id="enFilter" type="text"
+           style="width: 250px; height: 35px; font-family: Arial; font-size: 120%; position: relative; left: 60px; top: -16px"/>
+
+    <span style="font-family: 楷体; font-size: 130%; font-weight: bold; display: block; position: relative; left: 10px; top: 5px">中文</span>
+    <input id="cnFilter" type="text"
+           style="width: 250px; height: 35px; font-family: 楷体; font-size: 130%; position: relative; left: 60px; top: -26px"/>
+
+    <button id="clear" style="width: 60px; height: 30px; position: relative; left: -180px; top: 30px">
+        <span style="font-family: 楷体; font-size: 150%; font-weight: bold">清空</span>
+    </button>
+    <button id="query" style="width: 60px; height: 30px; position: relative; left: 150px; top: -4px">
+        <span style="font-family: 楷体; font-size: 150%; font-weight: bold">查询</span>
+    </button>
+</div>
+
+<table style="border-collapse: collapse; table-layout: fixed; position: absolute; left: 100px; top: 340px">
+    <tbody>
+    <tr>
+        <td style="width: 150px">
+            <button id="selectAll">
+                <span style="font-family: 楷体; font-size: 140%; font-weight: bold">全选</span>
+            </button>
+            <button id="deleteSelect">
+                <span style="font-family: 楷体; font-size: 140%; font-weight: bold">删除</span>
+            </button>
+        </td>
+        <td style="width: 100px">
+            <span style="font-family: 楷体; font-size: 130%; font-weight: bold">编号</span>
+        </td>
+        <td style="width: 100px">
+            <span style="font-family: 楷体; font-size: 130%; font-weight: bold">收藏</span>
+        </td>
+        <td style="width: 300px">
+            <span style="font-family: 楷体; font-size: 130%; font-weight: bold">英文</span>
+        </td>
+        <td style="width: 400px">
+            <span style="font-family: 楷体; font-size: 130%; font-weight: bold">中文</span>
+        </td>
+        <td style="width: 150px">
+            <span style="font-family: 楷体; font-size: 130%; font-weight: bold">操作</span>
+        </td>
+    </tr>
+    </tbody>
+    <tbody id="items"></tbody>
+    <tbody>
+    <tr id="notice"></tr>
+    <tr>
+        <td id="tool" colspan="6" style="height: 80px; border-style: none"></td>
+    </tr>
+    </tbody>
+</table>
+
+<script type="application/javascript">
+    let storeSelect = document.getElementById("storeSelect");
+    let enFilter = document.getElementById("enFilter");
+    let cnFilter = document.getElementById("cnFilter");
+    let clear = document.getElementById("clear");
+    let query = document.getElementById("query");
+    let selectAll = document.getElementById("selectAll");
+    let deleteSelect = document.getElementById("deleteSelect");
+    let items = document.getElementById("items");
+    let notice = document.getElementById("notice");
+
+    // 全选
+    let checked = false;
+    selectAll.onclick = function () {
+        for (let tr of items.children) {
+            tr.firstElementChild.firstElementChild.checked = !checked;
+        }
+        checked = !checked;
+    };
+    // 批量删除
+    deleteSelect.onclick = function () {
+        let ids = [];
+        // 循环时不能直接删除元素
+        for (let tr of items.children) {
+            if (tr.firstElementChild.firstElementChild.checked) {
+                ids.push(tr.firstElementChild.firstElementChild.value);
+            }
+        }
+        if (ids.length > 0) {
+            ajax.post("/word/batchDelete?" + new Date().getTime().toString(), function (response) {
+                if (response.status === "success") {
+                    tool.reset();
+                    tool.service();
+                }
+            }, JSON.stringify(ids));
+        }
+    };
+    // 清空过滤条件
+    clear.onclick = function () {
+        storeSelect.value = null;
+        enFilter.value = null;
+        cnFilter.value = null;
+    };
+    // 更新请求参数
+    let data = {};
+    query.onclick = function () {
+        data.store = storeSelect.value ? (storeSelect.value === "1") : null;
+        data.en = enFilter.value;
+        data.cn = cnFilter.value;
+        // 重新查询结果
+        tool.reset();
+        tool.service();
+    };
+    // 根据条件分页
+    let tool = new PageTool(function () {
+        let tool = this;
+        let url = "/word/pageQuery";
+        data.page = {
+            current: tool.current,
+            size: tool.size
+        };
+        ajax.post(url, function (response) {
+            // 更新菜单栏
+            tool.updateNodeStatus(response.data);
+            // 更新表格
+            items.innerHTML = "";
+            notice.innerHTML = "";
+            // 没有查询出数据
+            if (response.data.total === 0) {
+                notice.innerHTML = '<td colspan="10"><span style="font-family: 楷体; font-size: 130%; font-weight: bold">没有查询到数据</span></td>';
+            } else {
+                let beanList = response.data.records;
+                let i = 1;
+                for (let bean of beanList) {
+                    let tr = document.createElement("tr");
+                    items.appendChild(tr);
+                    // 选择框
+                    let selectTd = document.createElement("td");
+                    selectTd.innerHTML = '<input type="checkbox" value="' + bean.idStr + ' "style="width: 25px; height: 25px; position: relative; top: 1px"/>';
+                    // 编号
+                    let idTd = document.createElement("td");
+                    idTd.innerHTML = '<span style="font-family: Arial; font-size: 100%">' + i.toString() + '</span>';
+                    i++;
+                    // 收藏
+                    let storeTd = document.createElement("td");
+                    let setStoreButton = document.createElement("button");
+                    setStoreButton.style = "width: 60px; height: 30px; position: relative";
+                    setStoreButton.innerHTML = '<span style="font-family: 楷体; font-size: 140%">' + (bean.store ? '取消' : '收藏') + '</span>';
+                    setStoreButton.onclick = function () {
+                        let data = {
+                            id: bean.idStr,
+                            store: !bean.store
+                        };
+                        ajax.put("/word/update?" + new Date().getTime().toString(), function (response) {
+                            if (response.status === "success") {
+                                ajax.get("/word/get/" + bean.idStr + "?" + new Date().getTime().toString(), function (response) {
+                                    if (response.status === "success") {
+                                        bean = response.data;
+                                        setStoreButton.innerHTML = '<span style="font-family: 楷体; font-size: 140%">' + (bean.store ? '取消' : '收藏') + '</span>';
+                                        setEnColor(bean);
+                                    }
+                                });
+                            }
+                        }, JSON.stringify(data));
+                    };
+                    storeTd.appendChild(setStoreButton);
+                    // 英文
+                    let enTd = document.createElement("td");
+                    let enInput = document.createElement("input");
+                    enInput.disabled = true;
+                    enInput.type = "text";
+                    enInput.style = "width: 292px; height: 36px; font-size: 120%; font-family: Arial; text-align: center";
+                    enInput.value = bean.en;
+                    enTd.appendChild(enInput);
+                    let setEnColor = function (bean) {
+                        if (bean.store) {
+                            enInput.style.color = "blue";
+                        } else {
+                            enInput.style.color = "black";
+                        }
+                    };
+                    setEnColor(bean);
+                    // 中文
+                    let cnTd = document.createElement("td");
+                    let cnInput = document.createElement("input");
+                    cnInput.disabled = true;
+                    cnInput.type = "text";
+                    cnInput.style = "width: 392px; height: 36px; font-size: 130%; font-family: 楷体; text-align: center;  color: black";
+                    cnInput.value = bean.cn;
+                    cnTd.appendChild(cnInput);
+                    // 操作
+                    let actionTd = document.createElement("td");
+                    // 修改按钮
+                    bean.preCommit = false;
+                    let updateButton = document.createElement("button");
+                    updateButton.innerText = "修改";
+                    updateButton.style = "font-family: 楷体; font-size: 110%; width: 60px; height: 30px; position: relative; left: -5px";
+                    updateButton.onclick = function () {
+                        if (bean.preCommit) {
+                            // 提交
+                            let data = {
+                                id: bean.idStr,
+                                en: enInput.value,
+                                cn: cnInput.value
+                            };
+                            ajax.put("/word/update?" + new Date().getTime().toString(), function (response) {
+                                if (response.status === "success") {
+                                    bean.preCommit = false;
+                                    enInput.disabled = true;
+                                    cnInput.disabled = true;
+                                    updateButton.innerText = "修改";
+                                    deleteButton.innerText = "删除";
+                                    ajax.get("/word/get/" + bean.idStr + "?" + new Date().getTime().toString(), function (response) {
+                                        if (response.status === "success") {
+                                            bean = response.data;
+                                            enInput.value = bean.en;
+                                            cnInput.value = bean.cn;
+                                            setEnColor(bean);
+                                            bean.preCommit = false;
+                                        }
+                                    });
+                                }
+                            }, JSON.stringify(data));
+                        } else {
+                            bean.preCommit = true;
+                            enInput.disabled = false;
+                            cnInput.disabled = false;
+                            updateButton.innerText = "确定";
+                            deleteButton.innerText = "取消";
+                        }
+                    };
+                    actionTd.appendChild(updateButton);
+                    // 删除按钮
+                    let deleteButton = document.createElement("button");
+                    deleteButton.innerText = "删除";
+                    deleteButton.style = "font-family: 楷体; font-size: 110%; width: 60px; height: 30px; position: relative; left: 5px";
+                    deleteButton.onclick = function () {
+                        if (bean.preCommit) {
+                            bean.preCommit = false;
+                            enInput.disabled = true;
+                            cnInput.disabled = true;
+                            updateButton.innerText = "修改";
+                            deleteButton.innerText = "删除";
+                            enInput.value = bean.en;
+                            cnInput.value = bean.cn;
+                        } else {
+                            ajax.delete("/word/delete/" + bean.idStr + "?" + new Date().getTime().toString(), function (response) {
+                                if (response.status === "success") {
+                                    tool.reset();
+                                    tool.service();
+                                }
+                            })
+                        }
+                    };
+                    actionTd.appendChild(deleteButton);
+                    // 添加td
+                    tr.appendChild(selectTd);
+                    tr.appendChild(idTd);
+                    tr.appendChild(storeTd);
+                    tr.appendChild(enTd);
+                    tr.appendChild(cnTd);
+                    tr.appendChild(actionTd);
+                }
+            }
+        }, JSON.stringify(data));
+    });
+    document.getElementById("tool").appendChild(tool.generateToolbar());
+</script>
+</body>
+</html>
